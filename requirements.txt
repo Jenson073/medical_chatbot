@@ -2,3 +2,4 @@ streamlit
 scikit-learn
 pyngrok
 numpy
+sentence-transformers
