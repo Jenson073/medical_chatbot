@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import make_pipeline
 
 # Load the intents file
-with open("intents.json", "r") as file:
+with open("intents1.json", "r") as file:
     data = json.load(file)
 
 # Prepare data
