@@ -2,50 +2,37 @@ import streamlit as st
 import json
 import random
 import numpy as np
-from sentence_transformers import SentenceTransformer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import make_pipeline
 
-# Load the intents JSON file
+# Load the intents file
 with open("intents.json", "r") as file:
     data = json.load(file)
 
-# Extract patterns and tags
-corpus = []
-labels = []
+# Prepare data
+X = []
+y = []
 responses = {}
 
 for intent in data["intents"]:
     tag = intent["tag"]
-    for pattern in intent["patterns"]:
-        corpus.append(pattern)
-        labels.append(tag)
     responses[tag] = intent["responses"]
+    for pattern in intent["patterns"]:
+        X.append(pattern)
+        y.append(tag)
 
-# Load Sentence Transformer model
-st.session_state.embedder = st.session_state.get("embedder", SentenceTransformer("all-MiniLM-L6-v2"))
-embedder = st.session_state.embedder
-
-# Embed the entire corpus once
-if "corpus_embeddings" not in st.session_state:
-    st.session_state.corpus_embeddings = embedder.encode(corpus)
-
-corpus_embeddings = st.session_state.corpus_embeddings
-
-# Function to predict intent
-def predict_intent(user_input):
-    user_embedding = embedder.encode([user_input])
-    similarities = cosine_similarity(user_embedding, corpus_embeddings)
-    best_match_index = np.argmax(similarities)
-    predicted_tag = labels[best_match_index]
-    return predicted_tag
+# Create the pipeline
+model = make_pipeline(TfidfVectorizer(), RandomForestClassifier(n_estimators=100))
+model.fit(X, y)
 
 # Streamlit UI
-st.title("💊 Medical Chatbot")
-st.markdown("Ask me anything about symptoms, medicines, or health concerns!")
+st.title("💉 Medical Chatbot")
+st.markdown("Feel free to ask anything related to healthcare, symptoms, or medicines.")
 
 user_input = st.text_input("You:", "")
 
 if user_input:
-    intent = predict_intent(user_input)
-    response = random.choice(responses[intent])
+    prediction = model.predict([user_input])[0]
+    response = random.choice(responses[prediction])
     st.markdown(f"🤖: {response}")
