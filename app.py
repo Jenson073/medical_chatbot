@@ -1,44 +1,40 @@
 import streamlit as st
+import json
+import random
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+import warnings
+warnings.filterwarnings("ignore")
 
-# Training data
-training_data = [
-    {"intent": "greeting", "patterns": ["hello", "hi", "good morning"], "response": "Hi there! How can I help you?"},
-    {"intent": "fever", "patterns": ["I have a fever", "feverish", "hot body"], "response": "Sounds like a fever. Stay hydrated and consult a doctor."},
-    {"intent": "cold", "patterns": ["runny nose", "I have a cold"], "response": "It seems like a cold. Rest and drink warm fluids."},
-    {"intent": "goodbye", "patterns": ["bye", "see you later"], "response": "Goodbye! Stay safe."}
-]
+# Load intents.json
+with open("intents.json") as file:
+    data = json.load(file)
 
-# Preprocessing
-corpus = []
-labels = []
+# Prepare data
+X = []
+y = []
 responses = {}
 
-for data in training_data:
-    for pattern in data["patterns"]:
-        corpus.append(pattern.lower())
-        labels.append(data["intent"])
-    responses[data["intent"]] = data["response"]
+for intent in data["intents"]:
+    tag = intent["tag"]
+    responses[tag] = intent["responses"]
+    for pattern in intent["patterns"]:
+        X.append(pattern)
+        y.append(tag)
 
-vectorizer = TfidfVectorizer()
-X = vectorizer.fit_transform(corpus)
-model = LogisticRegression()
-model.fit(X, labels)
-
-# Chatbot response
-def get_response(user_input):
-    user_input = user_input.lower()
-    input_vector = vectorizer.transform([user_input])
-    prediction = model.predict(input_vector)[0]
-    return responses.get(prediction, "Sorry, I didn't understand that. Can you rephrase?")
+# Create pipeline (TF-IDF + Logistic Regression)
+model = make_pipeline(TfidfVectorizer(), LogisticRegression(max_iter=1000))
+model.fit(X, y)
 
 # Streamlit UI
-st.title("🩺 Healthcare Chatbot")
-st.write("This is a simple chatbot to help with basic symptom checking.")
+st.title("🩺 Medical Chatbot")
+st.markdown("Ask me anything about your health concerns.")
 
-user_input = st.text_input("You: ", "")
+user_input = st.text_input("You:", "")
 
 if user_input:
-    response = get_response(user_input)
-    st.text_area("Chatbot:", value=response, height=100)
+    prediction = model.predict([user_input])[0]
+    bot_response = random.choice(responses[prediction])
+    st.markdown(f"🤖: {bot_response}")
